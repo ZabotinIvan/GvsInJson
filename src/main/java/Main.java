@@ -7,8 +7,6 @@ import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
-
-
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -17,11 +15,10 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Type;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Main {
-
+    static StringBuilder stringBuilder = new StringBuilder();
     public static void main(String[] args) throws ParserConfigurationException, IOException, SAXException {
         String[] columnMapping = {"id", "firstName", "lastName", "country", "age"};
         String fileName = "data.csv";
@@ -32,8 +29,12 @@ public class Main {
             e.printStackTrace();
         }
         List<Employee> list = parseCSV(columnMapping, fileName);
-        String json = listToJson(list);
-        writeString(json);
+
+        List<Employee> employees = parseXML("data.xml");
+        String json1 = listToJson(employees);
+        writeString(json1);
+
+
 
     }
 
@@ -53,13 +54,12 @@ public class Main {
         return staff;
     }
 
-    static String listToJson(List list) {
+    static String listToJson(List<Employee> list) {
         Type listType = new TypeToken<List<Employee>>() {
         }.getType();
         GsonBuilder builder = new GsonBuilder();
         Gson gson = builder.create();
-        String json = gson.toJson(list, listType);
-        return json;
+        return gson.toJson(list, listType);
     }
 
     static void writeString(String json) {
@@ -71,30 +71,53 @@ public class Main {
             e.printStackTrace();
         }
     }
-    private static void parseXML(String name) throws ParserConfigurationException, IOException, SAXException {
+    private static List<Employee> parseXML(String name) throws ParserConfigurationException, IOException, SAXException {
+        List<Employee> list = new ArrayList<>();
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
         DocumentBuilder builder = factory.newDocumentBuilder();
         Document doc = builder.parse(new File(name));
         Node root = doc.getDocumentElement();
         read(root);
+        for (int i=0 ; i<stringBuilder.length(); i++){
+            if (stringBuilder.charAt(0) == ',') {
+            stringBuilder.deleteCharAt(0);
+            }
+        }
+        stringBuilder.deleteCharAt(stringBuilder.length()-1);
+        String str = String.valueOf(stringBuilder);
+        String[] strings = str.split(",");
+        for (int i = 0; i<strings.length; i++){
+            String str1 = strings[0];
+            String[] str2 = str1.split(" ");
+            int age = Integer.parseInt(str2[0]);
+            String country = str2[1];
+            String firstname = str2[2];
+            int id = Integer.parseInt(str2[3]);
+            String lastname = str2[4];
+            list.add(new Employee(id,firstname,lastname,country,age));
+        }
+        return list;
     }
-    private static void read(Node node) {
+    private  static void read(Node node) {
         NodeList nodeList = node.getChildNodes();
         for (int i = 0; i < nodeList.getLength(); i++) {
             Node node_ = nodeList.item(i);
             if (Node.ELEMENT_NODE == node_.getNodeType()) {
-                System.out.println("Текущий узел: " + node_.getNodeName());
                 Element element = (Element) node_;
                 NamedNodeMap map = element.getAttributes();
                 for (int a = 0; a < map.getLength(); a++) {
-                    String attrName = map.item(a).getNodeName();
-                    String attrValue = map.item(a).getNodeValue();
-                    System.out.println("Атрибут: " + attrName + "; значение: " + attrValue);
+                     String value = map.item(a).getNodeValue();
+                     stringBuilder.append(value);
+                     stringBuilder.append(" ");
                 }
+                stringBuilder.append(",");
                 read(node_);
             }
+
         }
+
     }
+
 
 
 }
